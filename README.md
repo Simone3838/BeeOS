@@ -42,4 +42,4 @@ Inspired by the collaborative and industrious nature of bees, BeeOS aims to be a
 
 ## License
 
-MIT License
+LICENSE.md
