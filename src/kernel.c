@@ -75,11 +75,84 @@ void kernel_print(const char* str) {
     }
 }
 
+// Enhanced kernel with basic memory management and scheduling
+#define KERNEL_VERSION "0.4"
+#define MAX_PROCESSES 8
+#define MEMORY_SIZE 1024 * 1024  // 1MB of simulated memory
+
+// Process Control Block
+typedef struct {
+    uint32_t pid;
+    enum { READY, RUNNING, BLOCKED, TERMINATED } state;
+    uint32_t stack_pointer;
+} Process;
+
+// Memory management structures
+typedef struct {
+    uint8_t* start;
+    size_t size;
+    uint8_t is_free;
+} MemoryBlock;
+
+// Global kernel data structures
+static Process processes[MAX_PROCESSES];
+static MemoryBlock memory_map[MAX_PROCESSES];
+static uint32_t current_pid = 0;
+
+// Memory allocation function
+void* kernel_malloc(size_t size) {
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        if (memory_map[i].is_free && memory_map[i].size >= size) {
+            memory_map[i].is_free = 0;
+            return memory_map[i].start;
+        }
+    }
+    return 0;  // Out of memory
+}
+
+// Simple process creation
+uint32_t create_process(void (*entry)()) {
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        if (processes[i].state == TERMINATED) {
+            processes[i].pid = i;
+            processes[i].state = READY;
+            // More advanced process setup would happen here
+            return i;
+        }
+    }
+    return (uint32_t)-1;  // Process creation failed
+}
+
+// Basic round-robin scheduler
+void schedule() {
+    current_pid = (current_pid + 1) % MAX_PROCESSES;
+    while (processes[current_pid].state != READY) {
+        current_pid = (current_pid + 1) % MAX_PROCESSES;
+    }
+    processes[current_pid].state = RUNNING;
+}
+
 void kernel_main() {
-    // Initialize the kernel
+    // Initialize memory management
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        memory_map[i].start = (uint8_t*)(0x100000 + i * 128 * 1024);  // Start after 1MB
+        memory_map[i].size = 128 * 1024;
+        memory_map[i].is_free = 1;
+        processes[i].state = TERMINATED;
+    }
+
     clear_screen();
-    kernel_print("BeeOS Kernel Initialized!\n");
-    kernel_print("Welcome to the hive!\n");
+    kernel_print("BeeOS Kernel v0.4 Initialized!\n");
+    kernel_print("Enhanced with Memory Management \n");
+    
+    // Demonstrate process and memory capabilities
+    kernel_print("Memory Allocation Test: ");
+    void* test_memory = kernel_malloc(1024);
+    if (test_memory) {
+        kernel_print("Successful \n");
+    } else {
+        kernel_print("Failed, it requires 1024 mb or will won't boot \n");
+    }
 
     // Halt the CPU
     while(1) {}
